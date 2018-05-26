@@ -9,12 +9,12 @@ import shapeless.{::, HList, HNil, LabelledGeneric, Lazy, Witness}
 import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 
-trait SchemaFor[T] {
+trait KafkaConnectSchemaFor[T] {
   def apply(): Schema
 }
 
 trait LowPrioritySchemaFor {
-  private def schemaFor[T](s: Schema) = new SchemaFor[T] {
+  private def schemaFor[T](s: Schema) = new KafkaConnectSchemaFor[T] {
     override def apply(): Schema = s
   }
 
@@ -28,7 +28,7 @@ trait LowPrioritySchemaFor {
   implicit val stringSchema = schemaFor[String](SchemaBuilder.string())
   implicit val booleanSchema = schemaFor[Boolean](SchemaBuilder.bool())
 
-  implicit def optionalSchema[T](implicit sf: SchemaFor[T]): SchemaFor[Option[T]] = {
+  implicit def optionalSchema[T](implicit sf: KafkaConnectSchemaFor[T]): KafkaConnectSchemaFor[Option[T]] = {
     val orig = sf()
     if(orig.`type`().isPrimitive) {
       schemaFor(new SchemaBuilder(orig.`type`()).optional())
@@ -39,12 +39,12 @@ trait LowPrioritySchemaFor {
     }
   }
 
-  implicit def collectionSchema[C[_] <: Iterable[_], T](implicit sf: SchemaFor[T]): SchemaFor[C[T]] = new SchemaFor[C[T]] {
+  implicit def collectionSchema[C[_] <: Iterable[_], T](implicit sf: KafkaConnectSchemaFor[T]): KafkaConnectSchemaFor[C[T]] = new KafkaConnectSchemaFor[C[T]] {
     override def apply(): Schema = SchemaBuilder.array(sf())
   }
 
-  implicit def mapSchema[Map[_,_], A,B](implicit sfa: SchemaFor[A], sfb: SchemaFor[B]): SchemaFor[Map[A,B]] =
-    new SchemaFor[Map[A,B]] {
+  implicit def mapSchema[Map[_,_], A,B](implicit sfa: KafkaConnectSchemaFor[A], sfb: KafkaConnectSchemaFor[B]): KafkaConnectSchemaFor[Map[A,B]] =
+    new KafkaConnectSchemaFor[Map[A,B]] {
       override def apply(): Schema = SchemaBuilder.map(sfa(), sfb())
     }
 }
@@ -62,20 +62,20 @@ class ValueEqualitySchemaBuilder private(t: Schema.Type) extends SchemaBuilder(t
   }
 }
 
-object SchemaFor extends LowPrioritySchemaFor {
+object KafkaConnectSchemaFor extends LowPrioritySchemaFor {
 
-  def apply[T](implicit cp: Lazy[SchemaFor[T]]) = cp.value.apply()
+  def apply[T](implicit cp: Lazy[KafkaConnectSchemaFor[T]]) = cp.value.apply()
 
-  implicit def hnilDefault = new SchemaFor[HNil] {
+  implicit def hnilDefault = new KafkaConnectSchemaFor[HNil] {
     override def apply(): Schema = ValueEqualitySchemaBuilder.struct()
   }
 
   implicit def hconsToSchema[Key <: Symbol, Head, Tail <: HList](
-                                                                implicit key: Witness.Aux[Key],
-                                                                headSchemaFor: Lazy[SchemaFor[Head]],
-                                                                tailSchemaFor: Lazy[SchemaFor[Tail]])
-  : SchemaFor[FieldType[Key, Head] :: Tail] =
-    new SchemaFor[FieldType[Key, Head] :: Tail] {
+                                                                  implicit key: Witness.Aux[Key],
+                                                                  headSchemaFor: Lazy[KafkaConnectSchemaFor[Head]],
+                                                                  tailSchemaFor: Lazy[KafkaConnectSchemaFor[Tail]])
+  : KafkaConnectSchemaFor[FieldType[Key, Head] :: Tail] =
+    new KafkaConnectSchemaFor[FieldType[Key, Head] :: Tail] {
       override def apply(): Schema = {
         val schema = tailSchemaFor.value().asInstanceOf[SchemaBuilder]
 
@@ -85,8 +85,8 @@ object SchemaFor extends LowPrioritySchemaFor {
     }
 
 
-      implicit def classAuxDefault[T,R](implicit gen: LabelledGeneric.Aux[T,R], conv: SchemaFor[R], ct: ClassTag[T]):
-      SchemaFor[T] = new SchemaFor[T] {
+      implicit def classAuxDefault[T,R](implicit gen: LabelledGeneric.Aux[T,R], conv: KafkaConnectSchemaFor[R], ct: ClassTag[T]):
+      KafkaConnectSchemaFor[T] = new KafkaConnectSchemaFor[T] {
         override def apply(): Schema = conv()
       }
 }

@@ -17,7 +17,7 @@ class StructBuilderSpec extends FlatSpec with Matchers {
 
   "The StructBuilder" should "build a simple struct" in {
     val testObj = Person(1, "Engitano Mark")
-    val struct = StructBuilder(testObj)
+    val struct = KafkaConnectValueFor(testObj).asInstanceOf[Struct]
 
     struct.getInt32("id") should be(testObj.id)
     struct.getString("name") should be(testObj.name)
@@ -25,7 +25,7 @@ class StructBuilderSpec extends FlatSpec with Matchers {
 
   it should "Buid a nested optional struct with Some value" in {
     val testObj = Company("Engitano", Some(Person(1, "Engitano Mark")))
-    val struct = StructBuilder(testObj)
+    val struct = KafkaConnectValueFor(testObj).asInstanceOf[Struct]
 
     struct.getString("name") should be(testObj.name)
     struct.schema().field("owner").schema().isOptional should be(true)
@@ -37,7 +37,7 @@ class StructBuilderSpec extends FlatSpec with Matchers {
 
   it should "Buid a nested optional struct with None value" in {
     val testObj = Company("Engitano", None)
-    val struct = StructBuilder(testObj)
+    val struct = KafkaConnectValueFor(testObj).asInstanceOf[Struct]
 
     struct.getString("name") should be(testObj.name)
     struct.schema().field("owner").schema().isOptional should be(true)
@@ -48,7 +48,7 @@ class StructBuilderSpec extends FlatSpec with Matchers {
 
   it should "Buid a nested list" in {
     val testObj = School("Engitano College", List(Person(1, "Engitano Mark")))
-    val struct = StructBuilder(testObj)
+    val struct = KafkaConnectValueFor(testObj).asInstanceOf[Struct]
 
     struct.getString("name") should be(testObj.name)
     val students = struct.getArray[Struct]("students").asScala
@@ -61,7 +61,7 @@ class StructBuilderSpec extends FlatSpec with Matchers {
 
   it should "Buid a nested map struct" in {
     val testObj = Rating("languages", Map("Scala" -> 100, "C#" -> 85, "Java" -> 75))
-    val struct = StructBuilder(testObj)
+    val struct = KafkaConnectValueFor(testObj).asInstanceOf[Struct]
 
     struct.getString("category") should be(testObj.category)
     val scores = struct.getMap[String, Int]("scores").asScala
